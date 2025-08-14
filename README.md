@@ -2,7 +2,7 @@
   <img src="assets/logo.png" alt="Placement Chatbot Logo" width="200"/>
 </p>
 
-<h1 align="center">Placed</h1>
+<h1 align="center">Chatbot</h1>
 <p align="center">
   An intelligent, desktop-based chatbot to query and explore scraped placement data.
 </p>
@@ -26,7 +26,8 @@ It uses **semantic search** over pre-scraped data to quickly find relevant jobs,
 ---
 
 ## 📂 Project Structure
-IITBplaced_chatbot/
+```
+placed_chatbot/
 ├── assets/ # Images, logos
 ├── data/ # Raw & processed JSON data
 ├── chatbot/ # Core chatbot logic & UI
@@ -34,3 +35,5 @@ IITBplaced_chatbot/
 ├── config.py # Configurations
 ├── requirements.txt # Dependencies
 └── README.md # Documentation
+
+```
