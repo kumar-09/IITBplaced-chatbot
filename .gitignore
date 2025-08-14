@@ -1,0 +1,8 @@
+
+
+venv/
+
+data/
+*.csv
+*.json
+*.xml
