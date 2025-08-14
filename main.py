@@ -1,58 +1,61 @@
-import json
+# main.py
 import os
+import json
+from dotenv import load_dotenv
+from openai import OpenAI
 
-# Load data
-def load_json(filename):
-    with open(filename, "r", encoding="utf-8") as f:
-        return json.load(f)
+# 1️⃣ Load environment variables
+load_dotenv()
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("OPENAI_API_KEY not found in .env file")
 
-departments = load_json("data/departments.json")
-specializations = load_json("data/specializations.json")
-sectors = load_json("data/sectors.json")
-programs = load_json("data/programs.json")
-jobs = load_json("data/jobs.json")
+# 2️⃣ Initialize OpenAI client
+client = OpenAI(api_key=api_key)
 
-# Helper functions
-def get_department_by_id(dep_id):
-    return next((d for d in departments if d["id"] == dep_id), None)
+# 3️⃣ Load enriched jobs data
+with open("data/enriched_jobs.json", "r", encoding="utf-8") as f:
+    jobs_data = json.load(f)
 
-def get_specializations_by_department(dep_id):
-    return [s for s in specializations if s["departmentId"] == dep_id]
+# 4️⃣ Simple retrieval function (can be replaced with embeddings later)
+def search_jobs(query):
+    results = []
+    for job in jobs_data:
+        combined_text = " ".join(str(v) for v in job.values() if isinstance(v, str))
+        if query.lower() in combined_text.lower():
+            results.append(job)
+    return results
 
-def get_sector_by_id(sector_id):
-    return next((s for s in sectors if s["id"] == sector_id), None)
-
-def get_jobs_by_sector_name(sector_name):
-    matching_sectors = [s for s in sectors if sector_name.lower() in s["name"].lower()]
-    sector_ids = {s["id"] for s in matching_sectors}
-    return [j for j in jobs if j.get("sectorId") in sector_ids]
-
-# Chat loop
+# 5️⃣ Chatbot function
 def chatbot():
-    print("📢 College Placement Chatbot (offline) — type 'exit' to quit")
+    print("Placement Chatbot (type 'exit' to quit)\n")
     while True:
-        query = input("\nYou: ").strip().lower()
-        if query == "exit":
+        user_input = input("You: ")
+        if user_input.lower() in ["exit", "quit"]:
+            print("Goodbye! 👋")
             break
-        
-        # Example rules
-        if "data science" in query:
-            results = get_jobs_by_sector_name("Data Science")
-            print(f"Found {len(results)} job(s) in Data Science sector:")
-            for r in results[:5]:
-                print("-", r["title"], "at", r["company"]["name"])
-        
-        elif "specialization" in query and "aerospace" in query:
-            dept = next((d for d in departments if "aerospace" in d["name"].lower()), None)
-            if dept:
-                specs = get_specializations_by_department(dept["id"])
-                print(f"Specializations in {dept['name']}:")
-                for s in specs:
-                    print("-", s["name"])
-            else:
-                print("No matching department found.")
-        
-        else:
-            print("Sorry, I don't understand yet. Try asking about jobs, sectors, or specializations.")
 
-chatbot()
+        # 🔍 Retrieve relevant jobs
+        matched_jobs = search_jobs(user_input)
+        context = ""
+        if matched_jobs:
+            for job in matched_jobs[:1]:  # limit to top 3 matches
+                context += f"- {job.get('title', 'N/A')} at {job.get('companyName', 'N/A')}, Sector: {job.get('sector', 'N/A')}, Salary: {job.get('currency', '')} {job.get('salary', 'N/A')}\n"
+                print(context)
+        else:
+            context = "No direct matches found in the database."
+
+        # 💬 Send to OpenAI
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful placement assistant. Use the provided job data to answer questions."},
+                {"role": "user", "content": f"User question: {user_input}\nHere is some relevant job data:\n{context}"}
+            ]
+        )
+
+        print("Bot:", response.choices[0].message.content, "\n")
+
+# 6️⃣ Run the chatbot
+if __name__ == "__main__":
+    chatbot()
